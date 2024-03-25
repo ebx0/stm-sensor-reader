@@ -23,9 +23,11 @@ uint8_t stats_find(const float data[], int size, buf_stats_t *p_handle) {
 	float variance = sumSqDiff / size; // Step 5
 	float sd = sqrt(variance);         // Step 6
 
+	float median = findMedian(data, size);
+
 	p_handle->max = max;
 	p_handle->min = min;
-	p_handle->mean = mean;
+	p_handle->median = median;
 	p_handle->sd = sd;
 	return 0;
 }

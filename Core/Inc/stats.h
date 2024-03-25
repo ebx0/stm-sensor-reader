@@ -5,10 +5,12 @@
 #include <stddef.h>
 #include <math.h>
 
+#include "filter.h"
+
 typedef struct {
     float min;
     float max;
-    float mean;
+    float median;
     float sd;
 } buf_stats_t;
 

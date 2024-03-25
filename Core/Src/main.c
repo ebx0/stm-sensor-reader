@@ -123,7 +123,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  	float mock_values[] = {1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0};
-	  	float transmit_values[30] = {0};
 
 	  	if (timer_get(&current_time_RTC)) { // If time changes (every second)
 	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[cb.size]);
@@ -136,7 +135,7 @@ int main(void)
 
 	 	  		//Print stats.
 	 	  		stats_find(cb.buffer, 10, &cb_stats);
-	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Min: %.2f Max: %.2f Mean: %.2f SD: %.2f \n", cb_stats.min, cb_stats.max, cb_stats.mean, cb_stats.sd);
+	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Min: %.2f Max: %.2f Median: %.2f SD: %.2f \n", cb_stats.min, cb_stats.max, cb_stats.median, cb_stats.sd);
 	   			HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
 
 	  			time_elapsed = 0;
