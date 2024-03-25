@@ -24,6 +24,8 @@
 #include "filter.h"
 #include "circular.h"
 #include "stats.h"
+#include "timer.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +45,8 @@
 /* Private variables ---------------------------------------------------------*/
  I2C_HandleTypeDef hi2c1;
 
+RTC_HandleTypeDef hrtc;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -52,12 +56,13 @@ UART_HandleTypeDef huart2;
  };
 
  buf_handle_t cb_raw = {
-     .head = 0, // Initialize head index to 0
-     .tail = 0, // Initialize tail index to 0
-     .size = 0, // Initialize buffer size to 0
      .capacity = MOV_WINDOW_SIZE // Set buffer capacity to maximum size
  };
 
+ time_handle_t current_time_RTC;
+ time_handle_t last_time_RTC;
+
+ float TX_data = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +70,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -105,8 +111,9 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_USART2_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
-
+  timer_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,20 +123,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  	float mock_values[] = {1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0};
+	  	float mock_values[] = {1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0};
 	  	float transmit_values[30] = {0};
 
-	  	for (int i = 0; i < 30; i++) {
-	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[i]);
+	  	if (timer_get(&current_time_RTC)) { // If time changes (every second)
+	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[cb.size]);
 	  		buffer_enter_value(&cb, filtered_value);
-	  	}
-	  	float TX_data = 0;
-	  	for (int i = 0; i < 30; i++) {
+
+
 	  		if (!buffer_get_value(&cb, &TX_data)){
 	  			sprintf(uart_buffer, "Sensor: %.2f\r\n", TX_data); // Format sensor data
-	  			HAL_UART_Transmit(&huart2, (uint8_t *)uart_buffer, strlen(uart_buffer), HAL_MAX_DELAY); // Transmit string over UART
+	   			HAL_UART_Transmit(&huart2, (uint8_t *)uart_buffer, strlen(uart_buffer), HAL_MAX_DELAY); // Transmit string over UART
 	  			HAL_Delay(1000);
-	  		}
+	    	}
+
+
+	  		char buffer[20]; // Buffer to hold formatted time string
+	  		sprintf(buffer, "Current Time: %02d:%02d:%02d ", current_time_RTC.hours, current_time_RTC.minutes, current_time_RTC.seconds);
+	  		HAL_UART_Transmit(&huart2, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
 	  	}
   }
   /* USER CODE END 3 */
@@ -152,8 +163,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 8;
@@ -211,6 +223,41 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
 
 }
 
