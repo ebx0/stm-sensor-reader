@@ -4,7 +4,7 @@ void buffer_init(buf_handle_t *p_handle) {
     p_handle->head = 0;
     p_handle->tail = 0;
     p_handle->size = 0;
-    p_handle->capacity = MAX_BUFFER_SIZE;
+    p_handle->capacity = CIRCULAR_BUFFER_SIZE;
 }
 
 uint8_t buffer_insert(buf_handle_t *p_handle, float value) {

@@ -35,7 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define TX_BUFFER_SIZE 127
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,15 +52,13 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 
  buf_handle_t cb = { // Circular Buffer
-     .capacity = MAX_BUFFER_SIZE
+     .capacity = CIRCULAR_BUFFER_SIZE
  };
-
  buf_handle_t cb_raw = {
      .capacity = MOV_WINDOW_SIZE // Set buffer capacity to maximum size
  };
-
+ buf_stats_t cb_stats;
  time_handle_t current_time_RTC;
- time_handle_t last_time_RTC;
 
  float TX_data = 0;
 /* USER CODE END PV */
@@ -97,7 +95,8 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   float filtered_value;
-  char uart_buffer[100];
+  char tx_buffer[TX_BUFFER_SIZE]; // Buffer to hold formatted time string
+  uint8_t time_elapsed;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -130,18 +129,24 @@ int main(void)
 	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[cb.size]);
 	  		buffer_enter_value(&cb, filtered_value);
 
+	  		if (time_elapsed >= 30){
+	  			//Print time
+	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Current Time: %02d:%02d:%02d ", current_time_RTC.hours, current_time_RTC.minutes, current_time_RTC.seconds);
+	 	  		HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
 
-	  		if (!buffer_get_value(&cb, &TX_data)){
-	  			sprintf(uart_buffer, "Sensor: %.2f\r\n", TX_data); // Format sensor data
-	   			HAL_UART_Transmit(&huart2, (uint8_t *)uart_buffer, strlen(uart_buffer), HAL_MAX_DELAY); // Transmit string over UART
-	  			HAL_Delay(1000);
+	 	  		//Print stats.
+	 	  		stats_find(cb.buffer, 10, &cb_stats);
+	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Min: %.2f Max: %.2f Mean: %.2f SD: %.2f \n", cb_stats.min, cb_stats.max, cb_stats.mean, cb_stats.sd);
+	   			HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
+
+	  			time_elapsed = 0;
 	    	}
 
 
-	  		char buffer[20]; // Buffer to hold formatted time string
-	  		sprintf(buffer, "Current Time: %02d:%02d:%02d ", current_time_RTC.hours, current_time_RTC.minutes, current_time_RTC.seconds);
-	  		HAL_UART_Transmit(&huart2, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+
+	  		time_elapsed++;
 	  	}
+	  	HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }

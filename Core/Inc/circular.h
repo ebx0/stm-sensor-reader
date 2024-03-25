@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define MAX_BUFFER_SIZE 32
+#define CIRCULAR_BUFFER_SIZE 32
 
 typedef struct {
-    float buffer[MAX_BUFFER_SIZE];
+    float buffer[CIRCULAR_BUFFER_SIZE];
     uint32_t head;
     uint32_t tail;
     uint32_t size;
