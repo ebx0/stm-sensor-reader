@@ -35,7 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TX_BUFFER_SIZE 127
+#define SAMPLE_RATE 1 //in hertz
+#define BROADCAST_PERIOD 30 //per samples
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -95,7 +96,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   float filtered_value;
-  char tx_buffer[TX_BUFFER_SIZE]; // Buffer to hold formatted time string
   uint8_t time_elapsed;
   /* USER CODE END Init */
 
@@ -113,6 +113,7 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
   timer_init();
+  uint8_t na = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,25 +123,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  	float mock_values[] = {1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1023.0, 1023.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 9.0, 9.0};
+	  	//float mock_values[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90};
+	  	float mock_values[] = {814,822,811,782,708,849,801,729,773,786,856,792,710,831,747,835,779,858,700,808,770,863,795,724,823,865,813,871,852,875,833,848,788,755,807,838,791,864,736,764,896,890,728,854,794,796,845,722,787,762,877,841,743,881,853,821,895,879,834,876,888,898,725,804,749,886,748,715,702,777,855,734,732,751,706,707,731,900,703,891,746,859,892,772,873,818,829,862,778,844,842,709,739,718,827,789,889,851,738,767};
 
 	  	if (timer_get(&current_time_RTC)) { // If time changes (every second)
-	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[cb.size]);
+
+	  		filtered_value = filter_sensor_value(&cb_raw, mock_values[na]);
 	  		buffer_enter_value(&cb, filtered_value);
 
-	  		if (time_elapsed >= 30){
-	  			//Print time
-	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Current Time: %02d:%02d:%02d ", current_time_RTC.hours, current_time_RTC.minutes, current_time_RTC.seconds);
-	 	  		HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
+	  		/* DEBUG */
+	  		char tx_buffer[TX_BUFFER_SIZE];
+	 	  	snprintf(tx_buffer, TX_BUFFER_SIZE, "raw=%.2f,", mock_values[na]);
+	 	  	HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
+	   		snprintf(tx_buffer, TX_BUFFER_SIZE, "filtered=%.2f\n", filtered_value);
+	   		HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
 
-	 	  		//Print stats.
-	 	  		stats_find(cb.buffer, 10, &cb_stats);
-	  			snprintf(tx_buffer, TX_BUFFER_SIZE, "Min: %.2f Max: %.2f Median: %.2f SD: %.2f \n", cb_stats.min, cb_stats.max, cb_stats.median, cb_stats.sd);
-	   			HAL_UART_Transmit(&huart2, (uint8_t *)tx_buffer, strlen(tx_buffer), HAL_MAX_DELAY);
 
+	  		if (time_elapsed >= BROADCAST_PERIOD){
+	 	  		stats_transmit(&huart2, &cb);
 	  			time_elapsed = 0;
 	    	}
-
 
 
 	  		time_elapsed++;
@@ -281,7 +283,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
